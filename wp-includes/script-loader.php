@@ -137,7 +137,7 @@ function wp_default_scripts( &$scripts ) {
 	did_action( 'init' ) && $scripts->localize(
 		'wp-ajax-response', 'wpAjax', array(
 			'noPerm' => __( 'Sorry, you are not allowed to do that.' ),
-			'broken' => __( 'An error has occurred.' ),
+			'broken' => __( 'Something went wrong.' ),
 		)
 	);
 
@@ -388,14 +388,12 @@ function wp_default_scripts( &$scripts ) {
 						'mejs.fullscreen-on'       => __( 'Go Fullscreen' ),
 						'mejs.download-video'      => __( 'Download Video' ),
 						'mejs.fullscreen'          => __( 'Fullscreen' ),
-						'mejs.time-jump-forward'   => array( __( 'Jump forward 1 second' ), __( 'Jump forward %1 seconds' ) ),
 						'mejs.loop'                => __( 'Toggle Loop' ),
 						'mejs.play'                => __( 'Play' ),
 						'mejs.pause'               => __( 'Pause' ),
 						'mejs.close'               => __( 'Close' ),
 						'mejs.time-slider'         => __( 'Time Slider' ),
 						'mejs.time-help-text'      => __( 'Use Left/Right Arrow keys to advance one second, Up/Down arrows to advance ten seconds.' ),
-						'mejs.time-skip-back'      => array( __( 'Skip back 1 second' ), __( 'Skip back %1 seconds' ) ),
 						'mejs.captions-subtitles'  => __( 'Captions/Subtitles' ),
 						'mejs.captions-chapters'   => __( 'Chapters' ),
 						'mejs.none'                => __( 'None' ),
@@ -407,7 +405,6 @@ function wp_default_scripts( &$scripts ) {
 						'mejs.video-player'        => __( 'Video Player' ),
 						'mejs.audio-player'        => __( 'Audio Player' ),
 						'mejs.ad-skip'             => __( 'Skip ad' ),
-						'mejs.ad-skip-info'        => array( __( 'Skip in 1 second' ), __( 'Skip in %1 seconds' ) ),
 						'mejs.source-chooser'      => __( 'Source Chooser' ),
 						'mejs.stop'                => __( 'Stop' ),
 						'mejs.speed-rate'          => __( 'Speed Rate' ),
@@ -605,8 +602,8 @@ function wp_default_scripts( &$scripts ) {
 			'close'                   => __( 'Close' ),
 			'action'                  => __( 'Action' ),
 			'discardChanges'          => __( 'Discard changes' ),
-			'cheatin'                 => __( 'An error has occurred.' ),
-			'notAllowedHeading'       => __( 'You don&#8217;t have permission to do this.' ),
+			'cheatin'                 => __( 'Something went wrong.' ),
+			'notAllowedHeading'       => __( 'You need a higher level of permission.' ),
 			'notAllowed'              => __( 'Sorry, you are not allowed to customize this site.' ),
 			'previewIframeTitle'      => __( 'Site Preview' ),
 			'loginIframeTitle'        => __( 'Session expired' ),
@@ -689,7 +686,7 @@ function wp_default_scripts( &$scripts ) {
 		did_action( 'init' ) && $scripts->localize(
 			'admin-tags', 'tagsl10n', array(
 				'noPerm' => __( 'Sorry, you are not allowed to do that.' ),
-				'broken' => __( 'An error has occurred.' ),
+				'broken' => __( 'Something went wrong.' ),
 			)
 		);
 
@@ -709,6 +706,17 @@ function wp_default_scripts( &$scripts ) {
 		);
 
 		$scripts->add( 'xfn', "/wp-admin/js/xfn$suffix.js", array( 'jquery' ), false, 1 );
+		did_action( 'init' ) && $scripts->localize(
+			'xfn', 'privacyToolsL10n', array(
+				'noDataFound'     => __( 'No personal data was found for this user.' ),
+				'foundAndRemoved' => __( 'All of the personal data found for this user was erased.' ),
+				'noneRemoved'     => __( 'Personal data was found for this user but was not erased.' ),
+				'someNotRemoved'  => __( 'Personal data was found for this user but some of the personal data found was not erased.' ),
+				'removalError'    => __( 'An error occurred while attempting to find and erase personal data.' ),
+				'noExportFile'    => __( 'No personal data export file was generated.' ),
+				'exportError'     => __( 'An error occurred while attempting to export personal data.' ),
+			)
+		);
 
 		$scripts->add( 'postbox', "/wp-admin/js/postbox$suffix.js", array( 'jquery-ui-sortable' ), false, 1 );
 		did_action( 'init' ) && $scripts->localize(
@@ -786,14 +794,15 @@ function wp_default_scripts( &$scripts ) {
 
 		$scripts->add( 'admin-gallery', "/wp-admin/js/gallery$suffix.js", array( 'jquery-ui-sortable' ) );
 
-		$scripts->add( 'admin-widgets', "/wp-admin/js/widgets$suffix.js", array( 'jquery-ui-sortable', 'jquery-ui-draggable', 'jquery-ui-droppable' ), false, 1 );
+		$scripts->add( 'admin-widgets', "/wp-admin/js/widgets$suffix.js", array( 'jquery-ui-sortable', 'jquery-ui-draggable', 'jquery-ui-droppable', 'wp-a11y' ), false, 1 );
 		did_action( 'init' ) && $scripts->add_inline_script(
 			'admin-widgets', sprintf(
 				'wpWidgets.l10n = %s;', wp_json_encode(
 					array(
-						'save'      => __( 'Save' ),
-						'saved'     => __( 'Saved' ),
-						'saveAlert' => __( 'The changes you made will be lost if you navigate away from this page.' ),
+						'save'        => __( 'Save' ),
+						'saved'       => __( 'Saved' ),
+						'saveAlert'   => __( 'The changes you made will be lost if you navigate away from this page.' ),
+						'widgetAdded' => __( 'Widget has been added to the selected sidebar' ),
 					)
 				)
 			)
@@ -918,7 +927,7 @@ function wp_default_scripts( &$scripts ) {
 					'activateImporter'         => __( 'Run Importer' ),
 					/* translators: %s: Importer name */
 					'activateImporterLabel'    => __( 'Run %s' ),
-					'unknownError'             => __( 'An error has occurred.' ),
+					'unknownError'             => __( 'Something went wrong.' ),
 					'connectionError'          => __( 'Connection lost or the server is busy. Please try again later.' ),
 					'nonceError'               => __( 'An error has occurred. Please reload the page and try again.' ),
 					'pluginsFound'             => __( 'Number of plugins found: %d' ),

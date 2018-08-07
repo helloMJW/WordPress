@@ -455,7 +455,7 @@ class WP_Terms_List_Table extends WP_List_Table {
 				__( 'Edit' )
 			);
 			$actions['inline hide-if-no-js'] = sprintf(
-				'<a href="#" class="editinline aria-button-if-js" aria-label="%s">%s</a>',
+				'<button type="button" class="button-link editinline" aria-label="%s" aria-expanded="false">%s</button>',
 				/* translators: %s: taxonomy term name */
 				esc_attr( sprintf( __( 'Quick edit &#8220;%s&#8221; inline' ), $tag->name ) ),
 				__( 'Quick&nbsp;Edit' )
@@ -470,7 +470,7 @@ class WP_Terms_List_Table extends WP_List_Table {
 				__( 'Delete' )
 			);
 		}
-		if ( $tax->public ) {
+		if ( is_taxonomy_viewable( $tax ) ) {
 			$actions['view'] = sprintf(
 				'<a href="%s" aria-label="%s">%s</a>',
 				get_term_link( $tag ),
@@ -486,9 +486,9 @@ class WP_Terms_List_Table extends WP_List_Table {
 		 * @since 2.8.0
 		 * @deprecated 3.0.0 Use {$taxonomy}_row_actions instead.
 		 *
-		 * @param array  $actions An array of action links to be displayed. Default
-		 *                        'Edit', 'Quick Edit', 'Delete', and 'View'.
-		 * @param WP_Term $tag    Term object.
+		 * @param string[] $actions An array of action links to be displayed. Default
+		 *                          'Edit', 'Quick Edit', 'Delete', and 'View'.
+		 * @param WP_Term  $tag     Term object.
 		 */
 		$actions = apply_filters( 'tag_row_actions', $actions, $tag );
 
@@ -499,9 +499,9 @@ class WP_Terms_List_Table extends WP_List_Table {
 		 *
 		 * @since 3.0.0
 		 *
-		 * @param array  $actions An array of action links to be displayed. Default
-		 *                        'Edit', 'Quick Edit', 'Delete', and 'View'.
-		 * @param WP_Term $tag    Term object.
+		 * @param string[] $actions An array of action links to be displayed. Default
+		 *                          'Edit', 'Quick Edit', 'Delete', and 'View'.
+		 * @param WP_Term  $tag     Term object.
 		 */
 		$actions = apply_filters( "{$taxonomy}_row_actions", $actions, $tag );
 

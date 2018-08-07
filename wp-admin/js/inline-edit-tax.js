@@ -1,7 +1,10 @@
-/* global inlineEditL10n, ajaxurl */
 /**
  * This file is used on the term overview page to power quick-editing terms.
+ *
+ * @output wp-admin/js/inline-edit-tax.js
  */
+
+/* global inlineEditL10n, ajaxurl */
 
 window.wp = window.wp || {};
 
@@ -36,9 +39,9 @@ inlineEditTax = {
 		t.type = $('#the-list').attr('data-wp-lists').substr(5);
 		t.what = '#'+t.type+'-';
 
-		$('#the-list').on('click', 'a.editinline', function(){
-			inlineEditTax.edit(this);
-			return false;
+		$( '#the-list' ).on( 'click', '.editinline', function() {
+			$( this ).attr( 'aria-expanded', 'true' );
+			inlineEditTax.edit( this );
 		});
 
 		/**
@@ -219,8 +222,10 @@ inlineEditTax = {
 						$( '#parent' ).find( 'option[value=' + option_value + ']' ).text( row.find( '.row-title' ).text() );
 
 						row.hide().fadeIn( 400, function() {
-							// Move focus back to the Quick Edit link.
-							row.find( '.editinline' ).focus();
+							// Move focus back to the Quick Edit button.
+							row.find( '.editinline' )
+								.attr( 'aria-expanded', 'false' )
+								.focus();
 							wp.a11y.speak( inlineEditL10n.saved );
 						});
 
@@ -262,8 +267,10 @@ inlineEditTax = {
 			$('#'+id).siblings('tr.hidden').addBack().remove();
 			id = id.substr( id.lastIndexOf('-') + 1 );
 
-			// Show the taxonomy row and move focus back to the Quick Edit link.
-			$( this.what + id ).show().find( '.editinline' ).focus();
+			// Show the taxonomy row and move focus back to the Quick Edit button.
+			$( this.what + id ).show().find( '.editinline' )
+				.attr( 'aria-expanded', 'false' )
+				.focus();
 		}
 	},
 
