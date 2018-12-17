@@ -381,7 +381,8 @@ function get_comment_count( $post_id = 0 ) {
 		FROM {$wpdb->comments}
 		{$where}
 		GROUP BY comment_approved
-	", ARRAY_A
+	",
+		ARRAY_A
 	);
 
 	$comment_count = array(
@@ -441,11 +442,7 @@ function get_comment_count( $post_id = 0 ) {
  * @return int|bool Meta ID on success, false on failure.
  */
 function add_comment_meta( $comment_id, $meta_key, $meta_value, $unique = false ) {
-	$added = add_metadata( 'comment', $comment_id, $meta_key, $meta_value, $unique );
-	if ( $added ) {
-		wp_cache_set( 'last_changed', microtime(), 'comment' );
-	}
-	return $added;
+	return add_metadata( 'comment', $comment_id, $meta_key, $meta_value, $unique );
 }
 
 /**
@@ -464,11 +461,7 @@ function add_comment_meta( $comment_id, $meta_key, $meta_value, $unique = false 
  * @return bool True on success, false on failure.
  */
 function delete_comment_meta( $comment_id, $meta_key, $meta_value = '' ) {
-	$deleted = delete_metadata( 'comment', $comment_id, $meta_key, $meta_value );
-	if ( $deleted ) {
-		wp_cache_set( 'last_changed', microtime(), 'comment' );
-	}
-	return $deleted;
+	return delete_metadata( 'comment', $comment_id, $meta_key, $meta_value );
 }
 
 /**
@@ -505,11 +498,7 @@ function get_comment_meta( $comment_id, $key = '', $single = false ) {
  * @return int|bool Meta ID if the key didn't exist, true on successful update, false on failure.
  */
 function update_comment_meta( $comment_id, $meta_key, $meta_value, $prev_value = '' ) {
-	$updated = update_metadata( 'comment', $comment_id, $meta_key, $meta_value, $prev_value );
-	if ( $updated ) {
-		wp_cache_set( 'last_changed', microtime(), 'comment' );
-	}
-	return $updated;
+	return update_metadata( 'comment', $comment_id, $meta_key, $meta_value, $prev_value );
 }
 
 /**
@@ -2520,7 +2509,8 @@ function discover_pingback_server_uri( $url, $deprecated = '' ) {
 	}
 
 	$response = wp_safe_remote_head(
-		$url, array(
+		$url,
+		array(
 			'timeout'     => 2,
 			'httpversion' => '1.0',
 		)
@@ -2541,7 +2531,8 @@ function discover_pingback_server_uri( $url, $deprecated = '' ) {
 
 	// Now do a GET since we're going to look in the html headers (and we're sure it's not a binary file)
 	$response = wp_safe_remote_get(
-		$url, array(
+		$url,
+		array(
 			'timeout'     => 2,
 			'httpversion' => '1.0',
 		)
@@ -2656,7 +2647,9 @@ function do_trackbacks( $post_id ) {
 				$wpdb->query(
 					$wpdb->prepare(
 						"UPDATE $wpdb->posts SET to_ping = TRIM(REPLACE(to_ping, %s,
-					'')) WHERE ID = %d", $tb_ping, $post->ID
+					'')) WHERE ID = %d",
+						$tb_ping,
+						$post->ID
 					)
 				);
 			}
@@ -3089,7 +3082,7 @@ function _close_comments_for_old_post( $open, $post_id ) {
  */
 function wp_handle_comment_submission( $comment_data ) {
 
-	$comment_post_ID = $comment_parent = 0;
+	$comment_post_ID = $comment_parent = $user_ID = 0;
 	$comment_author  = $comment_author_email = $comment_author_url = $comment_content = null;
 
 	if ( isset( $comment_data['comment_post_ID'] ) ) {
@@ -3506,4 +3499,13 @@ function wp_comments_personal_data_eraser( $email_address, $page = 1 ) {
 		'messages'       => $messages,
 		'done'           => $done,
 	);
+}
+
+/**
+ * Sets the last changed time for the 'comment' cache group.
+ *
+ * @since 5.0.0
+ */
+function wp_cache_set_comments_last_changed() {
+	wp_cache_set( 'last_changed', microtime(), 'comment' );
 }

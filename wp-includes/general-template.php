@@ -645,7 +645,9 @@ function get_bloginfo( $show = '', $filter = 'raw' ) {
 		case 'home': // DEPRECATED
 		case 'siteurl': // DEPRECATED
 			_deprecated_argument(
-				__FUNCTION__, '2.2.0', sprintf(
+				__FUNCTION__,
+				'2.2.0',
+				sprintf(
 					/* translators: 1: 'siteurl'/'home' argument, 2: bloginfo() function name, 3: 'url' argument */
 					__( 'The %1$s option is deprecated for the family of %2$s functions. Use the %3$s option instead.' ),
 					'<code>' . $show . '</code>',
@@ -716,13 +718,15 @@ function get_bloginfo( $show = '', $filter = 'raw' ) {
 			 */
 			$output = __( 'html_lang_attribute' );
 			if ( 'html_lang_attribute' === $output || preg_match( '/[^a-zA-Z0-9-]/', $output ) ) {
-				$output = is_admin() ? get_user_locale() : get_locale();
+				$output = determine_locale();
 				$output = str_replace( '_', '-', $output );
 			}
 			break;
 		case 'text_direction':
 			_deprecated_argument(
-				__FUNCTION__, '2.2.0', sprintf(
+				__FUNCTION__,
+				'2.2.0',
+				sprintf(
 					/* translators: 1: 'text_direction' argument, 2: bloginfo() function name, 3: is_rtl() function name */
 					__( 'The %1$s option is deprecated for the family of %2$s functions. Use the %3$s function instead.' ),
 					'<code>' . $show . '</code>',
@@ -1886,7 +1890,8 @@ function wp_get_archives( $args = '' ) {
 						array(
 							'm' => $arc_year,
 							'w' => $result->week,
-						), home_url( '/' )
+						),
+						home_url( '/' )
 					);
 					if ( 'post' !== $r['post_type'] ) {
 						$url = add_query_arg( 'post_type', $r['post_type'], $url );
@@ -2106,7 +2111,8 @@ function get_calendar( $initial = true, $echo = true ) {
 		"SELECT DISTINCT DAYOFMONTH(post_date)
 		FROM $wpdb->posts WHERE post_date >= '{$thisyear}-{$thismonth}-01 00:00:00'
 		AND post_type = 'post' AND post_status = 'publish'
-		AND post_date <= '{$thisyear}-{$thismonth}-{$last_day} 23:59:59'", ARRAY_N
+		AND post_date <= '{$thisyear}-{$thismonth}-{$last_day} 23:59:59'",
+		ARRAY_N
 	);
 	if ( $dayswithposts ) {
 		foreach ( (array) $dayswithposts as $daywith ) {
@@ -2301,9 +2307,9 @@ function get_the_date( $d = '', $post = null ) {
 	}
 
 	if ( '' == $d ) {
-		$the_date = mysql2date( get_option( 'date_format' ), $post->post_date );
+		$the_date = get_post_time( get_option( 'date_format' ), false, $post, true );
 	} else {
-		$the_date = mysql2date( $d, $post->post_date );
+		$the_date = get_post_time( $d, false, $post, true );
 	}
 
 	/**
@@ -2865,6 +2871,24 @@ function wp_no_robots() {
 }
 
 /**
+ * Display a noindex,noarchive meta tag and referrer origin-when-cross-origin meta tag.
+ *
+ * Outputs a noindex,noarchive meta tag that tells web robots not to index or cache the page content.
+ * Outputs a referrer origin-when-cross-origin meta tag that tells the browser not to send the full
+ * url as a referrer to other sites when cross-origin assets are loaded.
+ *
+ * Typical usage is as a wp_head callback. add_action( 'wp_head', 'wp_sensitive_page_meta' );
+ *
+ * @since 5.0.0
+ */
+function wp_sensitive_page_meta() {
+	?>
+	<meta name='robots' content='noindex,noarchive' />
+	<meta name='referrer' content='strict-origin-when-cross-origin' />
+	<?php
+}
+
+/**
  * Display site icon meta tags.
  *
  * @since 4.3.0
@@ -2898,11 +2922,11 @@ function wp_site_icon() {
 	}
 
 	/**
-	 * Filters the site icon meta tags, so Plugins can add their own.
+	 * Filters the site icon meta tags, so plugins can add their own.
 	 *
 	 * @since 4.3.0
 	 *
-	 * @param array $meta_tags Site Icon meta elements.
+	 * @param string[] $meta_tags Array of Site Icon meta tags.
 	 */
 	$meta_tags = apply_filters( 'site_icon_meta_tags', $meta_tags );
 	$meta_tags = array_filter( $meta_tags );
@@ -3174,7 +3198,9 @@ function wp_enqueue_editor() {
  * @since 4.9.0
  *
  * @see wp_enqueue_editor()
+ * @see wp_get_code_editor_settings();
  * @see _WP_Editors::parse_settings()
+ *
  * @param array $args {
  *     Args.
  *
@@ -3187,13 +3213,100 @@ function wp_enqueue_editor() {
  *     @type array    $jshint     JSHint rule overrides.
  *     @type array    $htmlhint   JSHint rule overrides.
  * }
- * @returns array|false Settings for the enqueued code editor, or false if the editor was not enqueued .
+ * @return array|false Settings for the enqueued code editor, or false if the editor was not enqueued.
  */
 function wp_enqueue_code_editor( $args ) {
 	if ( is_user_logged_in() && 'false' === wp_get_current_user()->syntax_highlighting ) {
 		return false;
 	}
 
+	$settings = wp_get_code_editor_settings( $args );
+
+	if ( empty( $settings ) || empty( $settings['codemirror'] ) ) {
+		return false;
+	}
+
+	wp_enqueue_script( 'code-editor' );
+	wp_enqueue_style( 'code-editor' );
+
+	if ( isset( $settings['codemirror']['mode'] ) ) {
+		$mode = $settings['codemirror']['mode'];
+		if ( is_string( $mode ) ) {
+			$mode = array(
+				'name' => $mode,
+			);
+		}
+
+		if ( ! empty( $settings['codemirror']['lint'] ) ) {
+			switch ( $mode['name'] ) {
+				case 'css':
+				case 'text/css':
+				case 'text/x-scss':
+				case 'text/x-less':
+					wp_enqueue_script( 'csslint' );
+					break;
+				case 'htmlmixed':
+				case 'text/html':
+				case 'php':
+				case 'application/x-httpd-php':
+				case 'text/x-php':
+					wp_enqueue_script( 'htmlhint' );
+					wp_enqueue_script( 'csslint' );
+					wp_enqueue_script( 'jshint' );
+					if ( ! current_user_can( 'unfiltered_html' ) ) {
+						wp_enqueue_script( 'htmlhint-kses' );
+					}
+					break;
+				case 'javascript':
+				case 'application/ecmascript':
+				case 'application/json':
+				case 'application/javascript':
+				case 'application/ld+json':
+				case 'text/typescript':
+				case 'application/typescript':
+					wp_enqueue_script( 'jshint' );
+					wp_enqueue_script( 'jsonlint' );
+					break;
+			}
+		}
+	}
+
+	wp_add_inline_script( 'code-editor', sprintf( 'jQuery.extend( wp.codeEditor.defaultSettings, %s );', wp_json_encode( $settings ) ) );
+
+	/**
+	 * Fires when scripts and styles are enqueued for the code editor.
+	 *
+	 * @since 4.9.0
+	 *
+	 * @param array $settings Settings for the enqueued code editor.
+	 */
+	do_action( 'wp_enqueue_code_editor', $settings );
+
+	return $settings;
+}
+
+/**
+ * Generate and return code editor settings.
+ *
+ * @since 5.0.0
+ *
+ * @see wp_enqueue_code_editor()
+ *
+ * @param array $args {
+ *     Args.
+ *
+ *     @type string   $type       The MIME type of the file to be edited.
+ *     @type string   $file       Filename to be edited. Extension is used to sniff the type. Can be supplied as alternative to `$type` param.
+ *     @type WP_Theme $theme      Theme being edited when on theme editor.
+ *     @type string   $plugin     Plugin being edited when on plugin editor.
+ *     @type array    $codemirror Additional CodeMirror setting overrides.
+ *     @type array    $csslint    CSSLint rule overrides.
+ *     @type array    $jshint     JSHint rule overrides.
+ *     @type array    $htmlhint   JSHint rule overrides.
+ * }
+ * @return array|false Settings for the code editor.
+ */
+function wp_get_code_editor_settings( $args ) {
 	$settings = array(
 		'codemirror' => array(
 			'indentUnit'       => 4,
@@ -3359,7 +3472,8 @@ function wp_enqueue_code_editor( $args ) {
 
 	if ( 'text/css' === $type ) {
 		$settings['codemirror'] = array_merge(
-			$settings['codemirror'], array(
+			$settings['codemirror'],
+			array(
 				'mode'              => 'css',
 				'lint'              => true,
 				'autoCloseBrackets' => true,
@@ -3368,7 +3482,8 @@ function wp_enqueue_code_editor( $args ) {
 		);
 	} elseif ( 'text/x-scss' === $type || 'text/x-less' === $type || 'text/x-sass' === $type ) {
 		$settings['codemirror'] = array_merge(
-			$settings['codemirror'], array(
+			$settings['codemirror'],
+			array(
 				'mode'              => $type,
 				'lint'              => false,
 				'autoCloseBrackets' => true,
@@ -3377,13 +3492,15 @@ function wp_enqueue_code_editor( $args ) {
 		);
 	} elseif ( 'text/x-diff' === $type ) {
 		$settings['codemirror'] = array_merge(
-			$settings['codemirror'], array(
+			$settings['codemirror'],
+			array(
 				'mode' => 'diff',
 			)
 		);
 	} elseif ( 'text/html' === $type ) {
 		$settings['codemirror'] = array_merge(
-			$settings['codemirror'], array(
+			$settings['codemirror'],
+			array(
 				'mode'              => 'htmlmixed',
 				'lint'              => true,
 				'autoCloseBrackets' => true,
@@ -3399,14 +3516,16 @@ function wp_enqueue_code_editor( $args ) {
 		}
 	} elseif ( 'text/x-gfm' === $type ) {
 		$settings['codemirror'] = array_merge(
-			$settings['codemirror'], array(
+			$settings['codemirror'],
+			array(
 				'mode'                => 'gfm',
 				'highlightFormatting' => true,
 			)
 		);
 	} elseif ( 'application/javascript' === $type || 'text/javascript' === $type ) {
 		$settings['codemirror'] = array_merge(
-			$settings['codemirror'], array(
+			$settings['codemirror'],
+			array(
 				'mode'              => 'javascript',
 				'lint'              => true,
 				'autoCloseBrackets' => true,
@@ -3415,7 +3534,8 @@ function wp_enqueue_code_editor( $args ) {
 		);
 	} elseif ( false !== strpos( $type, 'json' ) ) {
 		$settings['codemirror'] = array_merge(
-			$settings['codemirror'], array(
+			$settings['codemirror'],
+			array(
 				'mode'              => array(
 					'name' => 'javascript',
 				),
@@ -3431,7 +3551,8 @@ function wp_enqueue_code_editor( $args ) {
 		}
 	} elseif ( false !== strpos( $type, 'jsx' ) ) {
 		$settings['codemirror'] = array_merge(
-			$settings['codemirror'], array(
+			$settings['codemirror'],
+			array(
 				'mode'              => 'jsx',
 				'autoCloseBrackets' => true,
 				'matchBrackets'     => true,
@@ -3439,20 +3560,23 @@ function wp_enqueue_code_editor( $args ) {
 		);
 	} elseif ( 'text/x-markdown' === $type ) {
 		$settings['codemirror'] = array_merge(
-			$settings['codemirror'], array(
+			$settings['codemirror'],
+			array(
 				'mode'                => 'markdown',
 				'highlightFormatting' => true,
 			)
 		);
 	} elseif ( 'text/nginx' === $type ) {
 		$settings['codemirror'] = array_merge(
-			$settings['codemirror'], array(
+			$settings['codemirror'],
+			array(
 				'mode' => 'nginx',
 			)
 		);
 	} elseif ( 'application/x-httpd-php' === $type ) {
 		$settings['codemirror'] = array_merge(
-			$settings['codemirror'], array(
+			$settings['codemirror'],
+			array(
 				'mode'              => 'php',
 				'autoCloseBrackets' => true,
 				'autoCloseTags'     => true,
@@ -3464,7 +3588,8 @@ function wp_enqueue_code_editor( $args ) {
 		);
 	} elseif ( 'text/x-sql' === $type || 'text/x-mysql' === $type ) {
 		$settings['codemirror'] = array_merge(
-			$settings['codemirror'], array(
+			$settings['codemirror'],
+			array(
 				'mode'              => 'sql',
 				'autoCloseBrackets' => true,
 				'matchBrackets'     => true,
@@ -3472,7 +3597,8 @@ function wp_enqueue_code_editor( $args ) {
 		);
 	} elseif ( false !== strpos( $type, 'xml' ) ) {
 		$settings['codemirror'] = array_merge(
-			$settings['codemirror'], array(
+			$settings['codemirror'],
+			array(
 				'mode'              => 'xml',
 				'autoCloseBrackets' => true,
 				'autoCloseTags'     => true,
@@ -3483,7 +3609,8 @@ function wp_enqueue_code_editor( $args ) {
 		);
 	} elseif ( 'text/x-yaml' === $type ) {
 		$settings['codemirror'] = array_merge(
-			$settings['codemirror'], array(
+			$settings['codemirror'],
+			array(
 				'mode' => 'yaml',
 			)
 		);
@@ -3512,7 +3639,7 @@ function wp_enqueue_code_editor( $args ) {
 	 *
 	 * @param array $settings The array of settings passed to the code editor. A falsey value disables the editor.
 	 * @param array $args {
-	 *     Args passed when calling `wp_enqueue_code_editor()`.
+	 *     Args passed when calling `get_code_editor_settings()`.
 	 *
 	 *     @type string   $type       The MIME type of the file to be edited.
 	 *     @type string   $file       Filename being edited.
@@ -3524,69 +3651,7 @@ function wp_enqueue_code_editor( $args ) {
 	 *     @type array    $htmlhint   JSHint rule overrides.
 	 * }
 	 */
-	$settings = apply_filters( 'wp_code_editor_settings', $settings, $args );
-
-	if ( empty( $settings ) || empty( $settings['codemirror'] ) ) {
-		return false;
-	}
-
-	wp_enqueue_script( 'code-editor' );
-	wp_enqueue_style( 'code-editor' );
-
-	if ( isset( $settings['codemirror']['mode'] ) ) {
-		$mode = $settings['codemirror']['mode'];
-		if ( is_string( $mode ) ) {
-			$mode = array(
-				'name' => $mode,
-			);
-		}
-
-		if ( ! empty( $settings['codemirror']['lint'] ) ) {
-			switch ( $mode['name'] ) {
-				case 'css':
-				case 'text/css':
-				case 'text/x-scss':
-				case 'text/x-less':
-					wp_enqueue_script( 'csslint' );
-					break;
-				case 'htmlmixed':
-				case 'text/html':
-				case 'php':
-				case 'application/x-httpd-php':
-				case 'text/x-php':
-					wp_enqueue_script( 'htmlhint' );
-					wp_enqueue_script( 'csslint' );
-					wp_enqueue_script( 'jshint' );
-					if ( ! current_user_can( 'unfiltered_html' ) ) {
-						wp_enqueue_script( 'htmlhint-kses' );
-					}
-					break;
-				case 'javascript':
-				case 'application/ecmascript':
-				case 'application/json':
-				case 'application/javascript':
-				case 'application/ld+json':
-				case 'text/typescript':
-				case 'application/typescript':
-					wp_enqueue_script( 'jshint' );
-					wp_enqueue_script( 'jsonlint' );
-					break;
-			}
-		}
-	}
-
-	wp_add_inline_script( 'code-editor', sprintf( 'jQuery.extend( wp.codeEditor.defaultSettings, %s );', wp_json_encode( $settings ) ) );
-
-	/**
-	 * Fires when scripts and styles are enqueued for the code editor.
-	 *
-	 * @since 4.9.0
-	 *
-	 * @param array $settings Settings for the enqueued code editor.
-	 */
-	do_action( 'wp_enqueue_code_editor', $settings );
-
-	return $settings;
+	return apply_filters( 'wp_code_editor_settings', $settings, $args );
 }
 
 /**
@@ -3973,7 +4038,8 @@ function register_admin_color_schemes() {
 	$suffix .= SCRIPT_DEBUG ? '' : '.min';
 
 	wp_admin_css_color(
-		'fresh', _x( 'Default', 'admin color scheme' ),
+		'fresh',
+		_x( 'Default', 'admin color scheme' ),
 		false,
 		array( '#222', '#333', '#0073aa', '#00a0d2' ),
 		array(
@@ -3989,7 +4055,8 @@ function register_admin_color_schemes() {
 	}
 
 	wp_admin_css_color(
-		'light', _x( 'Light', 'admin color scheme' ),
+		'light',
+		_x( 'Light', 'admin color scheme' ),
 		admin_url( "css/colors/light/colors$suffix.css" ),
 		array( '#e5e5e5', '#999', '#d64e07', '#04a4cc' ),
 		array(
@@ -4000,7 +4067,8 @@ function register_admin_color_schemes() {
 	);
 
 	wp_admin_css_color(
-		'blue', _x( 'Blue', 'admin color scheme' ),
+		'blue',
+		_x( 'Blue', 'admin color scheme' ),
 		admin_url( "css/colors/blue/colors$suffix.css" ),
 		array( '#096484', '#4796b3', '#52accc', '#74B6CE' ),
 		array(
@@ -4011,7 +4079,8 @@ function register_admin_color_schemes() {
 	);
 
 	wp_admin_css_color(
-		'midnight', _x( 'Midnight', 'admin color scheme' ),
+		'midnight',
+		_x( 'Midnight', 'admin color scheme' ),
 		admin_url( "css/colors/midnight/colors$suffix.css" ),
 		array( '#25282b', '#363b3f', '#69a8bb', '#e14d43' ),
 		array(
@@ -4022,7 +4091,8 @@ function register_admin_color_schemes() {
 	);
 
 	wp_admin_css_color(
-		'sunrise', _x( 'Sunrise', 'admin color scheme' ),
+		'sunrise',
+		_x( 'Sunrise', 'admin color scheme' ),
 		admin_url( "css/colors/sunrise/colors$suffix.css" ),
 		array( '#b43c38', '#cf4944', '#dd823b', '#ccaf0b' ),
 		array(
@@ -4033,7 +4103,8 @@ function register_admin_color_schemes() {
 	);
 
 	wp_admin_css_color(
-		'ectoplasm', _x( 'Ectoplasm', 'admin color scheme' ),
+		'ectoplasm',
+		_x( 'Ectoplasm', 'admin color scheme' ),
 		admin_url( "css/colors/ectoplasm/colors$suffix.css" ),
 		array( '#413256', '#523f6d', '#a3b745', '#d46f15' ),
 		array(
@@ -4044,7 +4115,8 @@ function register_admin_color_schemes() {
 	);
 
 	wp_admin_css_color(
-		'ocean', _x( 'Ocean', 'admin color scheme' ),
+		'ocean',
+		_x( 'Ocean', 'admin color scheme' ),
 		admin_url( "css/colors/ocean/colors$suffix.css" ),
 		array( '#627c83', '#738e96', '#9ebaa0', '#aa9d88' ),
 		array(
@@ -4055,7 +4127,8 @@ function register_admin_color_schemes() {
 	);
 
 	wp_admin_css_color(
-		'coffee', _x( 'Coffee', 'admin color scheme' ),
+		'coffee',
+		_x( 'Coffee', 'admin color scheme' ),
 		admin_url( "css/colors/coffee/colors$suffix.css" ),
 		array( '#46403c', '#59524c', '#c7a589', '#9ea476' ),
 		array(

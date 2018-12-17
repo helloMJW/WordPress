@@ -404,9 +404,9 @@ class WP_oEmbed {
 		 *
 		 * @since 2.9.0
 		 *
-		 * @param string $data The returned oEmbed HTML.
-		 * @param string $url  URL of the content to be embedded.
-		 * @param array  $args Optional arguments, usually passed from a shortcode.
+		 * @param string|false $data The returned oEmbed HTML (false if unsafe).
+		 * @param string       $url  URL of the content to be embedded.
+		 * @param array        $args Optional arguments, usually passed from a shortcode.
 		 */
 		return apply_filters( 'oembed_result', $this->data2html( $data, $url ), $url, $args );
 	}
@@ -451,7 +451,8 @@ class WP_oEmbed {
 			 *                         used by at least Vimeo).
 			 */
 			$linktypes = apply_filters(
-				'oembed_linktypes', array(
+				'oembed_linktypes',
+				array(
 					'application/json+oembed' => 'json',
 					'text/xml+oembed'         => 'xml',
 					'application/xml+oembed'  => 'xml',
